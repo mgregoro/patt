@@ -1,0 +1,106 @@
+<html>
+    <head>
+        <title>PATT Feed Helper</title>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+        <script>
+            var pos = 1;
+            $(function() {
+                $('#append-patt-content').keypress(function(e) {
+                    if (e.which == 13) {
+                        $('#append-patt-go').click();
+                        return false;
+                    }
+                });
+                $('#append-patt-go').click(function() {
+                    // append to a patt!@#
+                    if (!$('#append-patt-feed').val()) {
+                        alert("Must specify a feed to append to!");
+                        return false;
+                    }
+                    $.get($('#append-patt-feed').val(), { op: 'append_feed', v: $('#append-patt-content').val() });
+                    $('#append-patt-content').val('');
+                    $('#log').prepend("content added to feed.\n");
+                });
+                $('#watch-patt-go').click(function() {
+                    // watch a patt!
+                    if (!$('#watch-patt-feed').val()) {
+                        alert("Must specify a feed to watch!");
+                        return false;
+                    }
+                    watch_loop();
+                    $('#log').prepend("feed watch started.\n");
+                });
+
+                $('#new-patt-go').click(function() {
+                    if (!$('#new-patt-feed').val()) {
+                        alert("Must specify a feed to create to!")
+                        return false;
+                    } 
+                    $.get($('#new-patt-feed').val(), { op: 'establish_feed' });
+                    $('#log').prepend("feed established!\n");
+                });
+            });
+            function watch_loop () {
+                setTimeout(function() {
+                    $('#feed-title').text('boop beeeeep');
+                    $.getJSON($('#watch-patt-feed').val(), { op: 'poll_feed', pos: pos }, function(data) {
+                        $.each(data.seqnos, function(i, k) {
+                            $('pre#feed-pre').prepend(k.seqno + ": " + k.payload + "\n");
+                            pos = parseInt(k.seqno) + 1;
+                        });
+                    });
+                    setTimeout('watch_loop()', 500);
+                }, 500);
+            }
+        </script>
+        <style>
+            body {
+                font-family: arial, helvetica, sans-serif;
+            }
+            #feed-window {
+                background-color: blue;
+                color: white;
+                width: 100%;
+                height: 400px;
+                padding: 2px;
+                overflow: scroll;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>
+            PATT has feeds!
+        </h1>
+
+        <fieldset>
+            <legend>Add To A Feed</legend>
+            <p>You can specify a feed location and append stuff to it using the tool below!</p>
+            <label>Full PATT feed location
+                <input type="text" name="append-patt-feed" id="append-patt-feed" size="50"/>
+            </label><br/>
+            <label>What to append?!
+                <textarea cols="50" wrap="virtual" rows="3" name="append-patt-content" id="append-patt-content"></textarea>
+            </label>
+            <input type="button" id="append-patt-go" value="APPEND"/>
+        </fieldset>
+        <fieldset>
+            <legend>Watch A Feed</legend>
+            <p>You can also watch a feed if you wanna.  Ok neat.</p>
+            <label>Feed to watch!!!!@#
+                <input type="text" name="watch-patt-feed" id="watch-patt-feed" size="50"/>
+            </label><input type="button" id="watch-patt-go" value="WatCh it!"/><br/>
+            <div id="feed-window"><span id="feed-title"></span><pre id="feed-pre"></pre></div>
+        </fieldset>
+        <fieldset>
+            <legend>Initialize A Feed</legend>
+            <p>Claim your own feed.  do it.  now.. </p>
+            <label>Where you want your feed?
+                <input type="text" name="new-patt-feed" id="new-patt-feed" size="50"/>
+            </label><br/>
+            <input type="button" id="new-patt-go" id="new-patt-go" value="NEW PATT"/>
+        </fieldset>
+        <pre id="log">
+
+        </pre>
+    </body>
+</html>

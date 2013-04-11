@@ -1,0 +1,41 @@
+<html>
+    <head>
+        <title>PUT ALL THE THINGS</title>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+        <script>
+            function randomUUID() {
+              var s = [], itoh = '0123456789ABCDEF';
+              for (var i = 0; i <36; i++) s[i] = Math.floor(Math.random()*0x10);
+              s[14] = 4;
+              s[19] = (s[19] & 0x3) | 0x8; 
+              for (var i = 0; i <36; i++) s[i] = itoh[s[i]];
+              s[8] = s[13] = s[18] = s[23] = '-';
+              return s.join('');
+            }
+        </script>
+        <script>
+            $(function() {
+                $('form[name=put]').submit(function() {
+                    $(this).attr('action', $(this).attr('action') + $('input[name=where]').val());
+                });
+                $('#genuuids').click(function() {
+                    var uuids = [];
+                    uuids[0] = randomUUID();
+                    uuids[1] = randomUUID();
+                    uuids[2] = randomUUID();
+                    $('input[name=where]').val(uuids.join('/'));
+                    return false;
+                });
+            });
+        </script>
+    </head>
+
+    <body>
+        where (<span style="font-size: 7px">hint: uuids, crypto hashes</span>)? <input type="text" name="where" size="40
+        <form name="put" method="post" action="/" enctype="multipart/form-data">
+            <input type="hidden" name="op" value="put"/>
+            <input type="file" name="f"/> exp in:<input type="text" name="expires_in" value="1h" size=3"/>  protect for:
+            <input type="submit" value="PUT"/>
+        </form>
+    </body>
+</html>

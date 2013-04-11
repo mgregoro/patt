@@ -1,0 +1,67 @@
+
+------ [ About PATT ]
+
+PATT, or Put All The Things, at its core, is a simple web application built around
+a simple web server.  The concept was born out of a brainstorming session where we
+were trying to figure out how to back up private keys that would normally be stored
+on a user's cell phone.  What would happen if they lost their phone?  Who could 
+they trust with their private key?  The answer is a common one in this type of 
+situation: "no one."  With this in mind, I set out to create a haystack so huge one
+could hide a thousand needles within it, and no one could ever find your key.
+
+------ [ PATT's Properties ]
+
+1). PATT allows any user to write any content to any /path/ on the web server.  You
+may even supply your own HTTP response headers and PATT will honor them and send 
+them along with your content.  If you don't supply your own HTTP response headers 
+PATT will generate some for you.
+
+2). PATT resists attempts to "crawl" our namespace.  PATT does so by keeping track 
+of the number of times a given IP address attempts to "read" or "get" data from a 
+path that is known to be empty.  If you make too many requests where there is no
+data, you end up in a "waiting" state.  None of your requests work at all until 
+this state clears.  Further, every time you attempt to connect while in the wait 
+state results in another penalty!
+
+3). PATT allows you to "protect" (make read-only) content for a certain length of 
+time (up to 5 years, default 1 hour).  PATT also allows you to "expire" content 
+after a specified amount of time has elapsed.  Please note: these values are only 
+writable when you create a new PATT of something, you can not go back and edit 
+them.
+
+4). In addition to allowing users to upload content to any path on the web server
+PATT also offers the ability to create feeds.  Feeds are pieces of content that, if
+known by multiple parties, can be used to communicate.  A great example of what is 
+possible with feeds is pattchat, available as helpers/autochat.html in the PATT 
+distribution.
+
+5). All content stored on the PATT server is stored encrypted with Twofish.  The
+key used to encrypt the files is a substring of a SHA256 hash of the reverse of the
+URL used to store the content.  Requests to PATT are not logged, and so if you are
+communicating with PATT over SSL, it is damn near impossible for anyone to know the
+location of the content you're uploading or retrieving unless you gave it to them
+yourself, or they found it in your browser's history.  This scheme is relatively 
+air tight, provided you are using SSL and connecting to a PATT server run by either
+someone you trust, or a PATT server you set up for yourself.
+
+------ [ PATT_that ]
+
+PATT also has a pretty handy command line tool that can upload files recursively to
+any location that you choose.  It will even generate file indexes in HTML that you
+can use to navigate your PATTed content.  There are quite a few options for you to
+try out on the command line.  If you spend a lot of time in the command line PATT 
+becomes an easy replacement for any pastebin or image hosting site.
+
+------ [ PATTchat ]
+
+PATTchat is the first web application built for the PATT platform.  It proves a few
+concepts and actually ends up being a lot of fun.  Allowing anyone to write any 
+content to a web page is a really unique experience.  Embedded YouTube videos and 
+animated gifs stream up your screen as you laugh with friends.  It's a free for all
+so anyone can pretty much do anything they want.
+
+------ [ PATT and Politics ]
+
+PATT is a great way around SOPA and other crazy nonsense.  You can't be held liable
+for things that are encrypted on your hard drive.
+

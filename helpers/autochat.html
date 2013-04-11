@@ -1,0 +1,206 @@
+<html>
+    <head>
+        <title>PATTchat</title>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+        <script>
+            $.extend({
+              getUrlVars: function(){
+                var vars = [], hash;
+                var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+                for(var i = 0; i < hashes.length; i++)
+                {
+                  hash = hashes[i].split('=');
+                  vars.push(hash[0]);
+                  vars[hash[0]] = hash[1];
+                }
+                return vars;
+              },
+              getUrlVar: function(name){
+                return $.getUrlVars()[name];
+              }
+            });
+            function randomUUID() {
+              var s = [], itoh = '0123456789ABCDEF';
+              for (var i = 0; i <36; i++) s[i] = Math.floor(Math.random()*0x10);
+              s[14] = 4;
+              s[19] = (s[19] & 0x3) | 0x8;
+              for (var i = 0; i <36; i++) s[i] = itoh[s[i]];
+              s[8] = s[13] = s[18] = s[23] = '-';
+              return s.join('');
+            }
+
+            // you have to edit this.
+            var feed = "/BfgGRGWQBGgbwgbwasqbgru13g1iunack";
+            var pos = 1;
+            var feed_pfx;
+            var say_buffer_pos = 0;
+            var say_buffer = [];
+            var ignore_list = [];
+            var iam;
+            $(function() {
+                // parse out an ignore list if we have one
+                if ($.getUrlVar('ignore')) {
+                    ignore_list = $.getUrlVar('ignore').split(',');
+                }
+
+                // who are we?
+                iam = $.getUrlVar('iam');
+                $('#iam').val(iam);
+                
+                var generated_feed_pfx = false;
+                // figure out if we need to generate our own uuid for our feed or whatup.
+                if ($.getUrlVar('feed_pfx')) {
+                    feed_pfx = $.getUrlVar('feed_pfx');
+                    feed = feed + feed_pfx;
+                } else {
+                    feed_pfx = randomUUID();
+                    feed = feed + feed_pfx;
+                    generated_feed_pfx = true;
+                }
+
+                var feed_exp = '8h';
+                if ($.getUrlVar('e')) {
+                    feed_exp = $.getUrlVar('e');
+                }
+
+                $('#iam').blur(function() {
+                    if (!($('#iam').val() == iam)) {
+                        var location_string = document.location.toString();
+                        if (location_string.match("iam=" + iam)) {
+                            // we're going to have to do a replace
+                            document.location.href = location_string.replace("iam=" + iam, "iam=" + $('#iam').val());
+                        } else {
+                            // just append
+                            document.location.href = document.location.toString() + "&iam=" + $('#iam').val();
+                        }
+                        $('#append-patt-content')[0].focus();
+
+                    }
+                });
+
+                // default to 8 hours 
+                $.get(feed, { op: 'establish_feed', e: feed_exp, p: feed_exp }, function() {
+                    if (generated_feed_pfx) {
+                        if (document.location.toString().match(/\?/)) {
+                            document.location = document.location + "&feed_pfx" + feed_pfx;
+                        } else {
+                            document.location = document.location + "?feed_pfx=" + feed_pfx;
+                        }
+                    }
+                });
+                $('#iam').keyup(function(e) {
+                    if (e.which == 13) {
+                        $('#iam').blur();
+                        return false;
+                    }
+                });
+                $('#append-patt-content').keyup(function(e) {
+                    if (e.which == 13) {
+                        $('#append-patt-go').click();
+                        return false;
+                    } else if (e.which == 38) {
+                        // up key
+                        if (!say_buffer_pos == 0) {
+                            // only do something if we have anywhere to go
+                            say_buffer_pos = say_buffer_pos - 1;
+                            $('#append-patt-content').val(say_buffer[say_buffer_pos]);
+                        }
+                        return false;
+                    } else if (e.which == 40) {
+                        // down key
+                        if ((say_buffer.length - 1) == say_buffer_pos) {
+                            $('#append-patt-content').val('');
+                        } else {
+                            say_buffer_pos = say_buffer_pos + 1;
+                            $('#append-patt-content').val(say_buffer[say_buffer_pos]);
+                        }
+                        return false;
+                    }
+                });
+                $('#append-patt-go').click(function() {
+                    // put this on our say buffer :)
+                    say_buffer.push($('#append-patt-content').val());
+                    say_buffer_pos = say_buffer.length - 1;
+
+                    // append to a patt!@#
+                    if (iam) {
+                        $.get(feed, { op: 'append_feed', v: "(" + iam + ") " + $('#append-patt-content').val() });
+                    } else {
+                        $.get(feed, { op: 'append_feed', v: $('#append-patt-content').val() });
+                    }
+                        
+                    $('#append-patt-content').val('');
+                    $('#log').prepend("content added to feed.\n");
+                });
+
+                $('#append-patt-content')[0].focus();
+                watch_loop();
+            });
+            function watch_loop () {
+                setTimeout(function() {
+                    if (!$('#feed-title').text()) {
+                        var components = document.location.toString().split("?");
+                        $('#feed-title').html('<a href="' + components[0] + '?feed_pfx=' + feed_pfx + '">?feed_pfx=' + feed_pfx + '</a>');
+                    }
+                    $.getJSON(feed, { op: 'poll_feed', pos: pos }, function(data) {
+                        $.each(data.seqnos, function(i, k) {
+                            var on_ignore_list = false;
+                            $.each(ignore_list, function(count, item) {
+                                if (parseInt(item) == parseInt(k.seqno)) {
+                                    on_ignore_list = true;
+                                }
+                            });
+                            pos = parseInt(k.seqno) + 1;
+                            if (!on_ignore_list) {
+                                if (k.payload.match('<')) {
+                                    $('pre#feed-pre').append(k.seqno + ":: " + k.payload + "\n");
+                                    $('pre#feed-pre').append(k.seqno + ":: " + k.payload.replace( new RegExp("<","gm"), "&lt;") + "\n");
+                                } else {
+                                    var href_payload = k.payload.replace(/(http[s]*\:\/\/[\:\w\_\-\+\%\#\@\!\&\.\=\/\?\[\]\(\)\~\,]+)/mg, '<a href="$1" title="autogenerated hyperlink to $1">$1</a>');
+                                    $('pre#feed-pre').append(k.seqno + ": " + href_payload + "\n");
+                                }
+                                $("#feed-window").prop({ scrollTop: $("#feed-window").prop("scrollHeight") });
+                            }
+                        });
+                    });
+                    setTimeout('watch_loop()', 500);
+                }, 500);
+            }
+        </script>
+        <style>
+            body {
+                font-family: arial, helvetica, sans-serif;
+            }
+            #feed-window {
+                background-color: blue;
+                color: white;
+                width: 100%;
+                height: 400px;
+                padding: 2px;
+                overflow-y: scroll;
+                overflow-x: hidden;
+                word-wrap: break-word;
+            }
+            #feed-window a {
+                color: white;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>
+            PATTchat v3.11 for Workgroups
+        </h1>
+
+        <fieldset>
+            <legend>PATTCHATT</legend>
+            <p id="topic">Hi, the topic goes here!</p>
+            <p>yeah.  pattchat. to join this chat: <span id="feed-title"></span></p>
+            <div id="feed-window"><pre id="feed-pre"></pre></div>
+            <input type="text" size="90" name="append-patt-content" id="append-patt-content"/>
+            <input type="button" id="append-patt-go" value="say"/> iam: <input type="text" size="10" name="iam" id="iam"/>
+        </fieldset>
+        <pre id="log">
+
+        </pre>
+    </body>
+</html>
