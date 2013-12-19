@@ -10,6 +10,8 @@
 # the same terms as Perl itself.
 #
 
+BEGIN { use Net::INET6Glue }
+
 use File::MimeInfo;
 use Data::UUID;
 use Getopt::Std;
@@ -295,7 +297,14 @@ sub generate_dir_index_file {
                 $indexed->{$file}->{size} = pretty_size($stat[7]);
 
                 # get the mimetype of the file and figure out what our rowclass is
-                my $mimetype = mimetype("$dir/$file");
+                my $mimetype;
+                if ($file !~ /\.(\w+)$/i) {
+                    # files with no extension are text
+                    $mimetype = "text/plain";
+                } else {
+                    $mimetype = mimetype("$dir/$file");
+                }
+
                 if ($mimetype =~ /image/) {
                     $indexed->{$file}->{rowclass} = "image-icon";
                 } else {
@@ -335,7 +344,13 @@ sub generate_dir_index_file {
             } else {
                 $indexed->{$name}->{size} = pretty_size($stat[7]);
                 # get the mimetype of the file and figure out what our rowclass is
-                my $mimetype = mimetype("$file");
+                my $mimetype;
+                if ($file !~ /\.(\w+)$/i) {
+                    # files with no extension are text
+                    $mimetype = "text/plain";
+                } else {
+                    $mimetype = mimetype("$dir/$file");
+                }
                 if ($mimetype =~ /image/) {
                     $indexed->{$name}->{rowclass} = "image-icon";
                 } else {
@@ -395,14 +410,13 @@ sub upload_files {
     );
 
     # set this twice
-    Mojo::IOLoop->max_connections(500);
     my $delay = Mojo::IOLoop->delay;
 
     while(my ($where, $file) = each %$upload_list) {
         $i++;
 
         # donno what this is gonna do...
-        $delay->begin;
+        my $end = $delay->begin;
 
         Mojo::IOLoop->timer(0.05 * $i, sub {
             my $mime_type;
@@ -413,11 +427,19 @@ sub upload_files {
                 if ($opts->{m}->{$ext}) {
                     $mime_type = $opts->{m}->{$ext};
                 } else {
-                    $mime_type = mimetype($file);
+                    if ($file !~ /\.(\w+)$/i) {
+                        # files with no extension are text
+                        $mime_type = "text/plain";
+                    } else {
+                        $mime_type = mimetype("$dir/$file");
+                    }
                 }
             }
 
-            $ua->post_form($where =>
+            # in case mimetype() returned undef...
+            $mime_type = "application/octet-stream" unless $mime_type;
+
+            $ua->post($where => form =>
                 {
                     protect_for => $opts->{p},
                     expires_in => $opts->{e},
@@ -433,7 +455,7 @@ sub upload_files {
                     } else {
                         warn "[error]: there was a problem PATTing $file ($mime_type)\n";
                     }
-                    $delay->end;
+                    $end->();
                 }
             );
         });
